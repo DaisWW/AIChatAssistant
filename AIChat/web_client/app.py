@@ -27,6 +27,12 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 # 存储用户会话
 user_sessions = {}
 
+# 聊天历史目录
+CHAT_HISTORY_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "chat_history")
+
+# 确保聊天历史目录存在
+os.makedirs(CHAT_HISTORY_DIR, exist_ok=True)
+
 @app.route('/')
 def index():
     """主页"""
@@ -92,7 +98,10 @@ def save_conversation():
         # 使用用户ID作为文件名的一部分
         filename = f"chat_history_{safe_user_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         
-        with open(filename, 'w', encoding='utf-8') as f:
+        # 完整的文件路径
+        file_path = os.path.join(CHAT_HISTORY_DIR, filename)
+        
+        with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(conversation_data, f, ensure_ascii=False, indent=2)
         
         return jsonify({'success': True, 'filename': filename})
@@ -104,11 +113,8 @@ def save_conversation():
 def get_conversation_files():
     """获取对话文件列表"""
     try:
-        # 获取项目根目录
-        root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        
         # 查找所有聊天历史文件
-        pattern = os.path.join(root_dir, "chat_history_*.json")
+        pattern = os.path.join(CHAT_HISTORY_DIR, "chat_history_*.json")
         files = glob.glob(pattern)
         
         file_list = []
@@ -166,12 +172,16 @@ def load_conversation():
         if not filename:
             return jsonify({'error': '文件名不能为空'}), 400
         
-        # 获取项目根目录
-        root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        file_path = os.path.join(root_dir, filename)
+        # 构建完整文件路径
+        file_path = os.path.join(CHAT_HISTORY_DIR, filename)
         
+        # 兼容旧版本，如果新目录下不存在文件，尝试从旧位置加载
         if not os.path.exists(file_path):
-            return jsonify({'error': '文件不存在'}), 404
+            old_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), filename)
+            if os.path.exists(old_path):
+                file_path = old_path
+            else:
+                return jsonify({'error': '文件不存在'}), 404
         
         # 读取对话文件
         with open(file_path, 'r', encoding='utf-8') as f:

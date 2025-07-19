@@ -19,6 +19,10 @@ body {
     -webkit-tap-highlight-color: transparent;
     /* 防止页面整体滚动 */
     overflow: hidden;
+    /* 移动端适配 */
+    position: fixed;
+    width: 100%;
+    height: 100%;
 }
 
 /* 基础布局 */
@@ -35,6 +39,8 @@ body {
     overflow: hidden;
     /* 防止整个容器滚动 */
     position: relative;
+    /* 移动端适配 */
+    max-height: calc(100vh - 20px);
 }
 
 .chat-main {
@@ -97,7 +103,7 @@ body {
     font-size: 12px;
 }
 
-/* 适配刘海屏 */
+/* 适配刘海屏和移动端 */
 @supports (padding: max(0px)) {
     .header {
         padding-top: max(12px, env(safe-area-inset-top));
@@ -107,6 +113,8 @@ body {
     
     .input-area {
         padding-bottom: max(12px, env(safe-area-inset-bottom));
+        /* 确保输入区域不被键盘遮挡 */
+        padding-bottom: max(20px, env(safe-area-inset-bottom));
     }
     
     .chat-container.landscape-mode .header {
@@ -207,6 +215,8 @@ body {
     -webkit-overflow-scrolling: touch;
     /* 添加底部内边距，防止最后一条消息被输入框遮挡 */
     padding-bottom: 20px;
+    /* 移动端适配 */
+    padding-bottom: 30px;
 }
 
 /* 自定义滚动条样式 */
@@ -313,6 +323,8 @@ body {
     /* 固定底部，防止滚动 */
     z-index: 10;
     position: relative; /* 确保在移动端上方不被遮挡 */
+    /* 移动端适配 */
+    padding-bottom: max(15px, env(safe-area-inset-bottom, 15px));
 }
 
 .input-container {
@@ -810,6 +822,8 @@ body {
         border-top: 1px solid #e0e0e0;
         padding: 10px;
         width: 100%;
+        /* 移动端键盘适配 */
+        padding-bottom: max(10px, env(safe-area-inset-bottom, 10px));
     }
     
     .input-container {
@@ -915,6 +929,62 @@ body {
     .speak-btn {
         font-size: 12px;
         padding: 1px 3px;
+    }
+    
+    /* 移动端键盘弹出时的特殊处理 */
+    @media (max-height: 600px) {
+        .chat-container {
+            height: 100vh;
+            border-radius: 0;
+        }
+        
+        .chat-main {
+            height: calc(100vh - 60px);
+        }
+        
+        .input-area {
+            /* 键盘弹出时确保输入区域可见 */
+            padding-bottom: max(5px, env(safe-area-inset-bottom, 5px));
+        }
+        
+        .chat-messages {
+            /* 键盘弹出时减少消息区域的底部内边距 */
+            padding-bottom: 20px;
+        }
+    }
+    
+    /* 移动端输入框优化 */
+    .message-input {
+        /* 防止iOS Safari中的缩放 */
+        font-size: 16px !important;
+        /* 确保输入框有足够的点击区域 */
+        min-height: 44px;
+        /* 优化触摸体验 */
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        -webkit-user-select: text;
+        user-select: text;
+    }
+    
+    /* 移动端按钮优化 */
+    .send-btn, .header-btn, .control-btn {
+        /* 确保按钮有足够的点击区域 */
+        min-height: 44px;
+        min-width: 44px;
+        /* 优化触摸体验 */
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+    }
+    
+    /* 移动端滚动优化 */
+    .chat-messages {
+        /* 优化滚动性能 */
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        /* 防止滚动时的橡皮筋效果 */
+        scroll-behavior: smooth;
     }
     
     /* 修复iOS Safari中的固定定位问题 */

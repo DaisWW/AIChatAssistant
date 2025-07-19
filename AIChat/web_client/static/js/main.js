@@ -2,7 +2,7 @@
 let userId; // 用户ID
 let conversationHistory = []; // 聊天历史
 let isTyping = false; // 是否正在输入
-let currentConversationFile = null; // 当前对话文件名
+window.currentConversationFile = null; // 全局当前对话文件名
 
 // DOM元素
 let chatMessages;
@@ -50,26 +50,26 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // 添加页面关闭时自动保存功能
-    window.addEventListener('beforeunload', function() {
+    window.addEventListener('beforeunload', function(event) {
         // 如果存在聊天记录，则自动保存
         if (conversationHistory && conversationHistory.length > 0) {
-            // 这里不能使用异步方式，因为页面即将关闭
-            // 尝试使用同步 XMLHttpRequest 来保存
             try {
-                const xhr = new XMLHttpRequest();
-                xhr.open('POST', '/api/save_conversation', false); // 第三个参数false表示同步请求
-                xhr.setRequestHeader('Content-Type', 'application/json');
-                xhr.send(JSON.stringify({
-                    user_id: userId,
-                    conversation: conversationHistory,
-                    filename: typeof currentConversationFile !== 'undefined' ? currentConversationFile : null
-                }));
-                
-                if (xhr.status === 200) {
-                    const response = JSON.parse(xhr.responseText);
-                    if (response.success) {
-                        console.log(`页面关闭前已保存对话：${response.filename}`);
-                    }
+                // 如果autoSaveConversation函数存在则使用它
+                if (typeof autoSaveConversation === 'function') {
+                    // 设置一个标志表明这是页面关闭时的保存
+                    window.isClosingSave = true;
+                    autoSaveConversation();
+                    window.isClosingSave = false;
+                } else {
+                    // 备用方案：同步保存
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/api/save_conversation', false); // 同步请求
+                    xhr.setRequestHeader('Content-Type', 'application/json');
+                    xhr.send(JSON.stringify({
+                        user_id: userId,
+                        conversation: conversationHistory,
+                        filename: window.currentConversationFile
+                    }));
                 }
             } catch (e) {
                 console.error("页面关闭时保存失败:", e);

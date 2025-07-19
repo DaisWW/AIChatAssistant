@@ -1,8 +1,5 @@
 // 聊天功能相关代码
 
-// 全局变量，用于跟踪当前对话的文件名
-let currentConversationFile = null;
-
 // 发送消息
 function sendMessage() {
     const message = messageInput.value.trim();
@@ -63,7 +60,7 @@ function resetConversation() {
     }
     
     // 重置当前对话文件名，这样下次保存时会创建新文件
-    currentConversationFile = null;
+    window.currentConversationFile = null;
     
     if (confirm('确定要开始新对话吗？这将清空所有当前聊天记录。')) {
         fetch('/api/reset_conversation', {
@@ -96,6 +93,32 @@ function autoSaveConversation() {
         return;
     }
 
+    // 页面关闭时需要同步保存
+    if (window.isClosingSave) {
+        try {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/api/save_conversation', false); // 同步请求
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.send(JSON.stringify({
+                user_id: userId,
+                conversation: conversationHistory,
+                filename: window.currentConversationFile
+            }));
+            
+            if (xhr.status === 200) {
+                const response = JSON.parse(xhr.responseText);
+                if (response.success) {
+                    console.log(`页面关闭前已保存对话：${response.filename}`);
+                    window.currentConversationFile = response.filename;
+                }
+            }
+        } catch (e) {
+            console.error('页面关闭时保存失败:', e);
+        }
+        return;
+    }
+
+    // 正常情况下异步保存
     fetch('/api/save_conversation', {
         method: 'POST',
         headers: {
@@ -104,7 +127,7 @@ function autoSaveConversation() {
         body: JSON.stringify({
             user_id: userId,
             conversation: conversationHistory,
-            filename: currentConversationFile
+            filename: window.currentConversationFile
         })
     })
     .then(response => response.json())
@@ -112,7 +135,7 @@ function autoSaveConversation() {
         if (data.success) {
             console.log(`聊天记录已自动保存到：${data.filename}`);
             // 更新当前对话文件名
-            currentConversationFile = data.filename;
+            window.currentConversationFile = data.filename;
         } else {
             console.error('自动保存失败：', data.error);
         }
@@ -202,7 +225,7 @@ function loadConversation(filename) {
     `;
 
     // 加载新对话时，设置当前文件名为加载的文件
-    currentConversationFile = filename;
+    window.currentConversationFile = filename;
 
     fetch('/api/load_conversation', {
         method: 'POST',

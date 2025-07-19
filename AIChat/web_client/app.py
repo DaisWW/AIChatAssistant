@@ -91,12 +91,17 @@ def save_conversation():
         data = request.get_json()
         user_id = data.get('user_id', 'default')
         conversation_data = data.get('conversation', [])
+        existing_filename = data.get('filename')
         
         # 确保用户ID安全（移除可能的路径注入字符）
         safe_user_id = "".join([c for c in user_id if c.isalnum() or c in ['_', '-']])
         
-        # 使用用户ID作为文件名的一部分
-        filename = f"chat_history_{safe_user_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        # 如果客户端提供了现有文件名，则使用该文件名覆盖保存
+        if existing_filename and os.path.basename(existing_filename) == existing_filename:
+            filename = existing_filename
+        else:
+            # 否则生成新的文件名
+            filename = f"chat_history_{safe_user_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         
         # 完整的文件路径
         file_path = os.path.join(CHAT_HISTORY_DIR, filename)

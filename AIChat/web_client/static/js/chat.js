@@ -1,5 +1,8 @@
 // 聊天功能相关代码
 
+// 全局变量，用于跟踪当前对话的文件名
+let currentConversationFile = null;
+
 // 发送消息
 function sendMessage() {
     const message = messageInput.value.trim();
@@ -38,6 +41,9 @@ function sendMessage() {
             if (window.speechModule) {
                 window.speechModule.speakAIResponse(response);
             }
+            
+            // 自动保存聊天记录
+            autoSaveConversation();
         } else {
             addMessage('❌ ' + data.error, 'bot');
         }
@@ -51,7 +57,14 @@ function sendMessage() {
 
 // 重置对话
 function resetConversation() {
-    if (confirm('确定要重置对话吗？这将清空所有聊天记录。')) {
+    if (conversationHistory.length > 0) {
+        // 自动保存当前对话
+        autoSaveConversation();
+        // 重置当前对话文件名
+        currentConversationFile = null;
+    }
+    
+    if (confirm('确定要开始新对话吗？这将清空所有当前聊天记录。')) {
         fetch('/api/reset_conversation', {
             method: 'POST',
             headers: {
@@ -74,6 +87,38 @@ function resetConversation() {
             }
         });
     }
+}
+
+// 自动保存对话（不显示提示）
+function autoSaveConversation() {
+    if (conversationHistory.length === 0) {
+        return;
+    }
+
+    fetch('/api/save_conversation', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            user_id: userId,
+            conversation: conversationHistory,
+            filename: currentConversationFile
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log(`聊天记录已自动保存到：${data.filename}`);
+            // 更新当前对话文件名
+            currentConversationFile = data.filename;
+        } else {
+            console.error('自动保存失败：', data.error);
+        }
+    })
+    .catch(error => {
+        console.error('保存时出现错误：', error);
+    });
 }
 
 // 加载对话历史列表

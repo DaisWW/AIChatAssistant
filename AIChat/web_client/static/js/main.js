@@ -7,12 +7,9 @@ let isTyping = false; // 是否正在输入
 let chatMessages;
 let messageInput;
 let sendBtn;
-let resetBtn;
-let saveBtn;
-let loadBtn;
-let clearBtn;
 let typingIndicator;
 let historyBtn;
+let newChatBtn; // 新建对话按钮
 let infoBtn;
 let historyModal;
 let closeHistoryModal;
@@ -50,6 +47,14 @@ document.addEventListener('DOMContentLoaded', function() {
     if (window.speechModule) {
         window.speechModule.init();
     }
+    
+    // 添加页面关闭时自动保存功能
+    window.addEventListener('beforeunload', function() {
+        // 如果存在聊天记录，则自动保存
+        if (conversationHistory && conversationHistory.length > 0) {
+            autoSaveConversation();
+        }
+    });
 });
 
 // 初始化DOM元素引用
@@ -57,12 +62,9 @@ function initDomReferences() {
     chatMessages = document.getElementById('chatMessages');
     messageInput = document.getElementById('messageInput');
     sendBtn = document.getElementById('sendBtn');
-    resetBtn = document.getElementById('resetBtn');
-    saveBtn = document.getElementById('saveBtn');
-    loadBtn = document.getElementById('loadBtn');
-    clearBtn = document.getElementById('clearBtn');
     typingIndicator = document.getElementById('typingIndicator');
     historyBtn = document.getElementById('historyBtn');
+    newChatBtn = document.getElementById('newChatBtn');
     infoBtn = document.getElementById('infoBtn');
     historyModal = document.getElementById('historyModal');
     closeHistoryModal = document.getElementById('closeHistoryModal');
@@ -150,10 +152,11 @@ function initEventListeners() {
     
     // 按钮事件
     sendBtn.addEventListener('click', sendMessage);
-    resetBtn.addEventListener('click', resetConversation);
-    saveBtn.addEventListener('click', saveConversation);
-    loadBtn.addEventListener('click', showHistoryModal);
-    clearBtn.addEventListener('click', clearInterface);
+    
+    // 顶部导航按钮
+    newChatBtn.addEventListener('click', resetConversation);
+    historyBtn.addEventListener('click', showHistoryModal);
+    infoBtn.addEventListener('click', showInfoModal);
     
     // 语音输入按钮事件
     if (voiceInputBtn) {
@@ -161,12 +164,10 @@ function initEventListeners() {
     }
     
     // 弹窗事件
-    historyBtn.addEventListener('click', showHistoryModal);
     closeHistoryModal.addEventListener('click', hideHistoryModal);
     closeHistoryBtn.addEventListener('click', hideHistoryModal);
     loadHistoryBtn.addEventListener('click', loadSelectedConversation);
     
-    infoBtn.addEventListener('click', showInfoModal);
     closeInfoModal.addEventListener('click', hideInfoModal);
     closeInfoBtn.addEventListener('click', hideInfoModal);
     

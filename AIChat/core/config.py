@@ -20,7 +20,7 @@ GIRLFRIEND_PRESET = {
 
 # 界面配置
 WINDOW_TITLE = "小甜心聊天助手"
-WINDOW_SIZE = "800x600"
+WINDOW_SIZE = "1000x800"
 CHAT_HISTORY_FILE = "chat_history.json"
 
 # 颜色主题

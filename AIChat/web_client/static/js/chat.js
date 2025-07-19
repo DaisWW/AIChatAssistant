@@ -60,9 +60,10 @@ function resetConversation() {
     if (conversationHistory.length > 0) {
         // 自动保存当前对话
         autoSaveConversation();
-        // 重置当前对话文件名
-        currentConversationFile = null;
     }
+    
+    // 重置当前对话文件名，这样下次保存时会创建新文件
+    currentConversationFile = null;
     
     if (confirm('确定要开始新对话吗？这将清空所有当前聊天记录。')) {
         fetch('/api/reset_conversation', {
@@ -200,6 +201,9 @@ function loadConversation(filename) {
         </div>
     `;
 
+    // 加载新对话时，设置当前文件名为加载的文件
+    currentConversationFile = filename;
+
     fetch('/api/load_conversation', {
         method: 'POST',
         headers: {
@@ -245,9 +249,6 @@ function loadConversation(filename) {
                     </div>
                 `;
             }
-            
-            // 滚动到底部
-            scrollToBottom();
         } else {
             chatMessages.innerHTML = `
                 <div class="welcome-message">

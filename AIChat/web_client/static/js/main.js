@@ -2,6 +2,7 @@
 let userId; // 用户ID
 let conversationHistory = []; // 聊天历史
 let isTyping = false; // 是否正在输入
+let currentConversationFile = null; // 当前对话文件名
 
 // DOM元素
 let chatMessages;
@@ -52,7 +53,27 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('beforeunload', function() {
         // 如果存在聊天记录，则自动保存
         if (conversationHistory && conversationHistory.length > 0) {
-            autoSaveConversation();
+            // 这里不能使用异步方式，因为页面即将关闭
+            // 尝试使用同步 XMLHttpRequest 来保存
+            try {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', '/api/save_conversation', false); // 第三个参数false表示同步请求
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.send(JSON.stringify({
+                    user_id: userId,
+                    conversation: conversationHistory,
+                    filename: typeof currentConversationFile !== 'undefined' ? currentConversationFile : null
+                }));
+                
+                if (xhr.status === 200) {
+                    const response = JSON.parse(xhr.responseText);
+                    if (response.success) {
+                        console.log(`页面关闭前已保存对话：${response.filename}`);
+                    }
+                }
+            } catch (e) {
+                console.error("页面关闭时保存失败:", e);
+            }
         }
     });
 });

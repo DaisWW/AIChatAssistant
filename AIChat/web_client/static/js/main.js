@@ -65,11 +65,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     const xhr = new XMLHttpRequest();
                     xhr.open('POST', '/api/save_conversation', false); // 同步请求
                     xhr.setRequestHeader('Content-Type', 'application/json');
-                    xhr.send(JSON.stringify({
+                    
+                    // 创建请求体，与autoSaveConversation函数一致
+                    const requestBody = {
                         user_id: userId,
-                        conversation: conversationHistory,
-                        filename: window.currentConversationFile
-                    }));
+                        conversation: conversationHistory
+                    };
+                    
+                    // 只有在window.currentConversationFile有值时才传递文件名
+                    if (window.currentConversationFile) {
+                        requestBody.filename = window.currentConversationFile;
+                    }
+                    
+                    xhr.send(JSON.stringify(requestBody));
                 }
             } catch (e) {
                 console.error("页面关闭时保存失败:", e);

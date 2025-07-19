@@ -55,6 +55,8 @@ function sendMessage() {
 // 重置对话
 function resetConversation() {
     if (conversationHistory.length > 0) {
+        // 保存当前对话，并设置一个特殊标记以区分来自重置的保存
+        const currentFile = window.currentConversationFile;
         // 自动保存当前对话
         autoSaveConversation();
     }
@@ -82,8 +84,16 @@ function resetConversation() {
                         <p>我是小甜心，重新开始聊天吧～ 😊</p>
                     </div>
                 `;
+                
+                // 确保文件名已重置，这样下一次保存将创建新文件
+                window.currentConversationFile = null;
             }
         });
+    } else {
+        // 如果用户取消重置，恢复原来的文件名
+        if (conversationHistory.length > 0) {
+            // 这里不需要做什么，因为我们没有提前改变currentConversationFile
+        }
     }
 }
 
@@ -92,6 +102,17 @@ function autoSaveConversation() {
     if (conversationHistory.length === 0) {
         return;
     }
+    
+    // 确保我们有正确的保存请求体
+    const requestBody = {
+        user_id: userId,
+        conversation: conversationHistory
+    };
+    
+    // 只有在window.currentConversationFile有值时才传递，保证新对话一定会创建新文件
+    if (window.currentConversationFile) {
+        requestBody.filename = window.currentConversationFile;
+    }
 
     // 页面关闭时需要同步保存
     if (window.isClosingSave) {
@@ -99,11 +120,7 @@ function autoSaveConversation() {
             const xhr = new XMLHttpRequest();
             xhr.open('POST', '/api/save_conversation', false); // 同步请求
             xhr.setRequestHeader('Content-Type', 'application/json');
-            xhr.send(JSON.stringify({
-                user_id: userId,
-                conversation: conversationHistory,
-                filename: window.currentConversationFile
-            }));
+            xhr.send(JSON.stringify(requestBody));
             
             if (xhr.status === 200) {
                 const response = JSON.parse(xhr.responseText);
@@ -124,11 +141,7 @@ function autoSaveConversation() {
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-            user_id: userId,
-            conversation: conversationHistory,
-            filename: window.currentConversationFile
-        })
+        body: JSON.stringify(requestBody)
     })
     .then(response => response.json())
     .then(data => {

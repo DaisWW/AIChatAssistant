@@ -96,15 +96,25 @@ def save_conversation():
         # 确保用户ID安全（移除可能的路径注入字符）
         safe_user_id = "".join([c for c in user_id if c.isalnum() or c in ['_', '-']])
         
-        # 如果客户端提供了现有文件名，则使用该文件名覆盖保存
+        # 生成文件名
         if existing_filename and os.path.basename(existing_filename) == existing_filename:
-            filename = existing_filename
+            # 验证文件名是否存在
+            existing_file_path = os.path.join(CHAT_HISTORY_DIR, existing_filename)
+            if os.path.exists(existing_file_path):
+                # 如果是更新现有文件，使用提供的文件名
+                filename = existing_filename
+            else:
+                # 如果文件不存在，创建新文件名
+                filename = f"chat_history_{safe_user_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         else:
-            # 否则生成新的文件名
+            # 创建新文件
             filename = f"chat_history_{safe_user_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         
         # 完整的文件路径
         file_path = os.path.join(CHAT_HISTORY_DIR, filename)
+        
+        # 确保目录存在
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
         
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(conversation_data, f, ensure_ascii=False, indent=2)

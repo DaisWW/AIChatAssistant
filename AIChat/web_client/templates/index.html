@@ -8,6 +8,59 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <!-- 自定义样式 -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* 语音识别反馈样式 */
+        .recognition-feedback {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 24px;
+            font-size: 16px;
+            z-index: 1000;
+            display: none;
+            max-width: 80%;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            animation: fadeIn 0.2s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        
+        /* 语音输入按钮样式 */
+        .voice-input-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 20px;
+            padding: 5px 10px;
+            color: #888;
+            transition: all 0.2s;
+            margin-right: 5px;
+            line-height: 1;
+        }
+        
+        .voice-input-btn:hover {
+            color: #555;
+        }
+        
+        .voice-input-btn.active {
+            color: #ff4081;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
 </head>
 <body>
     <div class="chat-container">
@@ -50,6 +103,7 @@
                         placeholder="输入消息... (Enter发送，Shift+Enter换行)"
                         rows="1"
                     ></textarea>
+                    <button id="voiceInputBtn" class="voice-input-btn" title="语音输入">🎙️</button>
                     <button id="sendBtn" class="send-btn">发送 💕</button>
                 </div>
                 <div class="controls">
@@ -170,6 +224,14 @@
             if (window.speechModule) {
                 window.speechModule.init();
                 
+                // 创建语音识别反馈元素
+                if (!document.getElementById('recognitionFeedback')) {
+                    const feedback = document.createElement('div');
+                    feedback.id = 'recognitionFeedback';
+                    feedback.className = 'recognition-feedback';
+                    document.body.appendChild(feedback);
+                }
+                
                 // 语音设置相关事件
                 const speechBtn = document.getElementById('speechBtn');
                 const speechModal = document.getElementById('speechModal');
@@ -250,6 +312,11 @@
                 const speechBtn = document.getElementById('speechBtn');
                 if (speechBtn) {
                     speechBtn.style.display = 'none';
+                }
+                
+                const voiceInputBtn = document.getElementById('voiceInputBtn');
+                if (voiceInputBtn) {
+                    voiceInputBtn.style.display = 'none';
                 }
             }
             

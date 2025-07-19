@@ -12,6 +12,53 @@ let speechPitch = 1.0;
 let speechVolume = 1.0;
 let autoSpeak = true; // 是否自动朗读AI回复
 
+// 语音识别对象
+let recognition = null;
+let isRecognizing = false;
+
+// 创建语音模块
+const speechModule = {
+    init: function() {
+        return initSpeech();
+    },
+    speak: function(text) {
+        speak(text);
+    },
+    stopSpeaking: function() {
+        stopSpeaking();
+    },
+    togglePause: function() {
+        togglePause();
+    },
+    setVoice: function(voiceName) {
+        setVoice(voiceName);
+    },
+    setRate: function(rate) {
+        setRate(rate);
+    },
+    setPitch: function(pitch) {
+        setPitch(pitch);
+    },
+    setVolume: function(volume) {
+        setVolume(volume);
+    },
+    setAutoSpeak: function(value) {
+        setAutoSpeak(value);
+    },
+    speakAIResponse: function(text) {
+        speakAIResponse(text);
+    },
+    startVoiceInput: function() {
+        startVoiceInput();
+    },
+    stopVoiceInput: function() {
+        stopVoiceInput();
+    }
+};
+
+// 导出语音模块
+window.speechModule = speechModule;
+
 // 初始化语音功能
 function initSpeech() {
     console.log("初始化语音功能...");
@@ -39,7 +86,206 @@ function initSpeech() {
     // 测试语音功能是否正常
     testSpeechSynthesis();
     
+    // 初始化语音识别
+    initSpeechRecognition();
+    
     return true;
+}
+
+// 初始化语音识别
+function initSpeechRecognition() {
+    // 检查浏览器是否支持语音识别
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        console.error('浏览器不支持语音识别');
+        return false;
+    }
+    
+    // 创建语音识别对象
+    recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    
+    // 设置语音识别参数
+    recognition.continuous = false; // 不持续识别
+    recognition.interimResults = true; // 显示中间结果
+    recognition.maxAlternatives = 1; // 返回最可能的识别结果
+    recognition.lang = 'zh-CN'; // 设置语言为中文
+    
+    // 设置事件处理
+    recognition.onstart = function() {
+        console.log('语音识别已开始');
+        isRecognizing = true;
+        updateVoiceInputButton(true);
+    };
+    
+    recognition.onend = function() {
+        console.log('语音识别已结束');
+        isRecognizing = false;
+        updateVoiceInputButton(false);
+    };
+    
+    recognition.onresult = function(event) {
+        let interimTranscript = '';
+        let finalTranscript = '';
+        
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript;
+            } else {
+                interimTranscript += event.results[i][0].transcript;
+            }
+        }
+        
+        if (finalTranscript) {
+            // 将最终识别结果添加到输入框
+            addRecognitionResultToInput(finalTranscript);
+        } else if (interimTranscript) {
+            // 显示临时识别结果
+            showInterimResult(interimTranscript);
+        }
+    };
+    
+    recognition.onerror = function(event) {
+        console.error('语音识别错误:', event.error);
+        isRecognizing = false;
+        updateVoiceInputButton(false);
+        
+        // 显示错误提示
+        if (event.error === 'no-speech') {
+            showRecognitionError('未检测到语音');
+        } else if (event.error === 'audio-capture') {
+            showRecognitionError('无法访问麦克风');
+        } else if (event.error === 'not-allowed') {
+            showRecognitionError('麦克风访问被拒绝');
+        } else {
+            showRecognitionError('语音识别错误: ' + event.error);
+        }
+    };
+    
+    return true;
+}
+
+// 开始语音识别
+function startVoiceInput() {
+    if (!recognition) {
+        initSpeechRecognition();
+    }
+    
+    if (recognition && !isRecognizing) {
+        try {
+            recognition.start();
+            showRecognitionFeedback('正在聆听...');
+        } catch (e) {
+            console.error('启动语音识别失败:', e);
+            showRecognitionError('启动语音识别失败');
+        }
+    } else if (isRecognizing) {
+        stopVoiceInput();
+    }
+}
+
+// 停止语音识别
+function stopVoiceInput() {
+    if (recognition && isRecognizing) {
+        try {
+            recognition.stop();
+        } catch (e) {
+            console.error('停止语音识别失败:', e);
+        }
+        hideRecognitionFeedback();
+        
+        // 确保状态被正确重置
+        isRecognizing = false;
+        updateVoiceInputButton(false);
+    }
+}
+
+// 显示临时识别结果
+function showInterimResult(text) {
+    const messageInput = document.getElementById('messageInput');
+    if (messageInput) {
+        messageInput.placeholder = '识别中: ' + text;
+    }
+    
+    // 可以添加一个临时显示的气泡
+    const feedback = document.getElementById('recognitionFeedback');
+    if (feedback) {
+        feedback.textContent = text || '正在聆听...';
+        feedback.style.display = 'block';
+    }
+}
+
+// 添加识别结果到输入框
+function addRecognitionResultToInput(text) {
+    const messageInput = document.getElementById('messageInput');
+    if (messageInput) {
+        // 恢复占位符
+        messageInput.placeholder = '输入消息... (Enter发送，Shift+Enter换行)';
+        
+        // 添加识别文本到输入框
+        const currentText = messageInput.value;
+        messageInput.value = currentText ? currentText + ' ' + text : text;
+        
+        // 触发输入事件以调整输入框高度
+        const event = new Event('input', {
+            bubbles: true,
+            cancelable: true,
+        });
+        messageInput.dispatchEvent(event);
+        
+        // 聚焦输入框
+        messageInput.focus();
+    }
+    
+    // 隐藏反馈
+    hideRecognitionFeedback();
+}
+
+// 显示识别反馈
+function showRecognitionFeedback(message) {
+    let feedback = document.getElementById('recognitionFeedback');
+    
+    if (!feedback) {
+        feedback = document.createElement('div');
+        feedback.id = 'recognitionFeedback';
+        feedback.className = 'recognition-feedback';
+        document.body.appendChild(feedback);
+    }
+    
+    feedback.textContent = message;
+    feedback.style.display = 'block';
+}
+
+// 隐藏识别反馈
+function hideRecognitionFeedback() {
+    const feedback = document.getElementById('recognitionFeedback');
+    if (feedback) {
+        feedback.style.display = 'none';
+    }
+    
+    // 恢复输入框占位符
+    const messageInput = document.getElementById('messageInput');
+    if (messageInput) {
+        messageInput.placeholder = '输入消息... (Enter发送，Shift+Enter换行)';
+    }
+}
+
+// 显示识别错误
+function showRecognitionError(message) {
+    showRecognitionFeedback('🔴 ' + message);
+    
+    // 3秒后自动隐藏
+    setTimeout(hideRecognitionFeedback, 3000);
+}
+
+// 更新语音输入按钮状态
+function updateVoiceInputButton(active) {
+    const voiceInputBtn = document.getElementById('voiceInputBtn');
+    if (voiceInputBtn) {
+        if (active) {
+            voiceInputBtn.classList.add('active');
+        } else {
+            voiceInputBtn.classList.remove('active');
+        }
+    }
 }
 
 // 测试语音合成功能
@@ -63,14 +309,23 @@ function loadVoices() {
     voiceOptions = speechSynthesis.getVoices();
     console.log(`找到${voiceOptions.length}个语音选项`);
     
-    // 如果没有选择过语音，默认选择中文语音
+    // 如果没有选择过语音，默认选择婷婷中文语音
     if (!selectedVoice) {
-        // 尝试查找中文语音
+        // 首先尝试查找"婷婷"语音
         selectedVoice = voiceOptions.find(voice => 
-            voice.lang.includes('zh') || 
-            voice.name.includes('Chinese') || 
-            voice.name.includes('中文')
+            voice.name.includes('婷婷') || 
+            voice.name.includes('Tingting') || 
+            voice.name.includes('Ting-Ting')
         );
+        
+        // 如果没有找到婷婷语音，则尝试查找其他中文语音
+        if (!selectedVoice) {
+            selectedVoice = voiceOptions.find(voice => 
+                voice.lang.includes('zh') || 
+                voice.name.includes('Chinese') || 
+                voice.name.includes('中文')
+            );
+        }
         
         // 如果没有找到中文语音，使用默认语音
         if (!selectedVoice && voiceOptions.length > 0) {
@@ -352,21 +607,14 @@ function setAutoSpeak(value) {
 
 // 朗读AI回复
 function speakAIResponse(text) {
-    if (autoSpeak) {
+    // 检查是否启用了自动朗读
+    if (autoSpeak && text) {
+        // 如果当前正在进行语音识别，先停止
+        if (isRecognizing) {
+            stopVoiceInput();
+        }
+        
+        // 开始朗读
         speak(text);
     }
-}
-
-// 导出函数
-window.speechModule = {
-    init: initSpeech,
-    speak: speak,
-    stop: stopSpeaking,
-    togglePause: togglePause,
-    setVoice: setVoice,
-    setRate: setRate,
-    setPitch: setPitch,
-    setVolume: setVolume,
-    setAutoSpeak: setAutoSpeak,
-    speakAIResponse: speakAIResponse
-}; 
+} 

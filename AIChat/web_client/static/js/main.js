@@ -24,6 +24,7 @@ let closeHistoryBtn;
 let infoModal;
 let closeInfoModal;
 let closeInfoBtn;
+let voiceInputBtn; // 语音输入按钮
 
 // 初始化Socket.IO
 const socket = io();
@@ -73,6 +74,7 @@ function initDomReferences() {
     infoModal = document.getElementById('infoModal');
     closeInfoModal = document.getElementById('closeInfoModal');
     closeInfoBtn = document.getElementById('closeInfoBtn');
+    voiceInputBtn = document.getElementById('voiceInputBtn'); // 语音输入按钮
 }
 
 // 初始化用户ID
@@ -153,6 +155,11 @@ function initEventListeners() {
     loadBtn.addEventListener('click', showHistoryModal);
     clearBtn.addEventListener('click', clearInterface);
     
+    // 语音输入按钮事件
+    if (voiceInputBtn) {
+        voiceInputBtn.addEventListener('click', toggleVoiceInput);
+    }
+    
     // 弹窗事件
     historyBtn.addEventListener('click', showHistoryModal);
     closeHistoryModal.addEventListener('click', hideHistoryModal);
@@ -167,12 +174,35 @@ function initEventListeners() {
     setupMobileOptimizations();
 }
 
+// 切换语音输入
+function toggleVoiceInput() {
+    if (window.speechModule) {
+        window.speechModule.startVoiceInput();
+    } else {
+        alert('您的浏览器不支持语音识别功能');
+    }
+}
+
 // 初始化UI
 function initUI() {
     messageInput.focus();
     
     // 确保初始时滚动到底部
     setTimeout(scrollToBottom, 100);
+    
+    // 检查浏览器是否支持语音识别
+    checkSpeechRecognitionSupport();
+}
+
+// 检查语音识别支持
+function checkSpeechRecognitionSupport() {
+    const isSupported = ('webkitSpeechRecognition' in window) || ('SpeechRecognition' in window);
+    
+    if (!isSupported && voiceInputBtn) {
+        // 如果不支持语音识别，禁用语音输入按钮
+        voiceInputBtn.style.display = 'none';
+        console.warn('此浏览器不支持语音识别功能');
+    }
 }
 
 // 初始化Socket连接

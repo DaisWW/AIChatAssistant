@@ -225,6 +225,35 @@ def load_conversation():
     except Exception as e:
         return jsonify({'error': f'加载对话失败：{str(e)}'}), 500
 
+@app.route('/api/delete_conversation', methods=['POST'])
+def delete_conversation():
+    """删除对话文件"""
+    try:
+        data = request.get_json()
+        filename = data.get('filename', '')
+        
+        if not filename:
+            return jsonify({'error': '文件名不能为空'}), 400
+        
+        # 确保文件名安全（只能是文件名，不能包含路径）
+        if os.path.basename(filename) != filename:
+            return jsonify({'error': '非法的文件名'}), 400
+        
+        # 构建完整文件路径
+        file_path = os.path.join(CHAT_HISTORY_DIR, filename)
+        
+        # 检查文件是否存在
+        if not os.path.exists(file_path):
+            return jsonify({'error': '文件不存在'}), 404
+        
+        # 删除文件
+        os.remove(file_path)
+        
+        return jsonify({'success': True, 'message': '已成功删除对话记录'})
+        
+    except Exception as e:
+        return jsonify({'error': f'删除失败：{str(e)}'}), 500
+
 @socketio.on('connect')
 def handle_connect():
     """客户端连接"""

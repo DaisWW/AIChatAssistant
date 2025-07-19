@@ -194,21 +194,33 @@ function loadConversationList() {
                     let displayName = formatDate(file.modified_time);
                     
                     item.innerHTML = `
-                        <div class="history-item-title">${displayName}</div>
-                        <div class="history-item-meta">
-                            <span>${formatFileSize(file.size)}</span>
-                            <span>${file.modified_time}</span>
+                        <div class="history-item-content">
+                            <div class="history-item-title">${displayName}</div>
+                            <div class="history-item-meta">
+                                <span>${formatFileSize(file.size)}</span>
+                                <span>${file.modified_time}</span>
+                            </div>
+                        </div>
+                        <div class="history-item-actions">
+                            <button class="history-delete-btn" title="删除此记录">🗑️</button>
                         </div>
                     `;
                     
                     // 点击选择
-                    item.addEventListener('click', function() {
+                    item.querySelector('.history-item-content').addEventListener('click', function() {
                         // 移除其他项的选中状态
                         document.querySelectorAll('.history-item').forEach(el => {
                             el.classList.remove('selected');
                         });
                         // 添加选中状态
-                        this.classList.add('selected');
+                        item.classList.add('selected');
+                    });
+                    
+                    // 删除按钮点击事件
+                    const deleteBtn = item.querySelector('.history-delete-btn');
+                    deleteBtn.addEventListener('click', function(e) {
+                        e.stopPropagation(); // 阻止事件冒泡，防止触发项目选中事件
+                        deleteConversation(file.filename);
                     });
                     
                     historyList.appendChild(item);
@@ -487,4 +499,40 @@ function clearInterface() {
             </div>
         `;
     }
+} 
+
+// 删除对话历史记录
+function deleteConversation(filename) {
+    if (!confirm('确定要删除这条对话记录吗？此操作不可撤销。')) {
+        return;
+    }
+    
+    fetch('/api/delete_conversation', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            filename: filename
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 如果删除的是当前正在查看的对话，需要重置对话
+            if (window.currentConversationFile === filename) {
+                window.currentConversationFile = null;
+                resetConversation();
+            }
+            
+            // 重新加载对话列表
+            loadConversationList();
+        } else {
+            alert('删除失败：' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('删除对话时出错：', error);
+        alert('删除失败：网络错误');
+    });
 } 

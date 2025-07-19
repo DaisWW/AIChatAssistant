@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>{{ bot_name }}聊天助手</title>
+    <!-- 外部库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <!-- 自定义样式 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="chat-container">
+        <div class="header">
+            <div class="header-center">
+                <div class="status-indicator"></div>
+                <h1>💕 {{ bot_name }} 💕</h1>
+                <p>你的专属AI小女友</p>
+            </div>
+            <div class="header-btn-group">
+                <button id="historyBtn" class="header-btn" title="加载对话">📂</button>
+                <button id="speechBtn" class="header-btn" title="语音设置">🎤</button>
+                <button id="infoBtn" class="header-btn" title="关于">ℹ️</button>
+            </div>
+        </div>
+
+        <div class="chat-main">
+            <div class="chat-messages" id="chatMessages">
+                <div class="welcome-message">
+                    <h3>欢迎来到聊天室！</h3>
+                    <p>我是{{ bot_name }}，很高兴见到你哦～ 😊</p>
+                    <p>有什么想和我聊的吗？</p>
+                    <div class="user-id-display" id="userId"></div>
+                </div>
+            </div>
+
+            <div class="typing-indicator" id="typingIndicator">
+                <div class="typing-dots">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <div class="input-container">
+                    <textarea 
+                        id="messageInput" 
+                        class="message-input" 
+                        placeholder="输入消息... (Enter发送，Shift+Enter换行)"
+                        rows="1"
+                    ></textarea>
+                    <button id="sendBtn" class="send-btn">发送 💕</button>
+                </div>
+                <div class="controls">
+                    <button id="resetBtn" class="control-btn">🔄 重置</button>
+                    <button id="saveBtn" class="control-btn">💾 保存</button>
+                    <button id="loadBtn" class="control-btn">📂 加载</button>
+                    <button id="clearBtn" class="control-btn">🗑️ 清空</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 对话历史弹窗 -->
+    <div id="historyModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>历史对话记录</h3>
+                <button class="modal-close" id="closeHistoryModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="historyLoading" style="text-align: center; padding: 20px;">
+                    <div class="loader"></div>
+                    <p style="margin-top: 10px; color: #666;">加载中...</p>
+                </div>
+                <div id="historyEmpty" class="empty-history" style="display: none;">
+                    <i>📝</i>
+                    <p>暂无历史对话记录</p>
+                </div>
+                <ul id="historyList" class="history-list"></ul>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn secondary" id="closeHistoryBtn">关闭</button>
+                <button class="modal-btn primary" id="loadHistoryBtn">加载选中对话</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 语音设置弹窗 -->
+    <div id="speechModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>语音设置</h3>
+                <button class="modal-close" id="closeSpeechModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="speech-settings">
+                    <div class="speech-setting-item">
+                        <label for="voiceSelector">选择语音：</label>
+                        <select id="voiceSelector"></select>
+                    </div>
+                    
+                    <div class="speech-setting-item">
+                        <label for="rateSlider">语速：<span id="rateValue">1.0</span></label>
+                        <input type="range" id="rateSlider" min="0.5" max="2" step="0.1" value="1.0">
+                    </div>
+                    
+                    <div class="speech-setting-item">
+                        <label for="pitchSlider">音调：<span id="pitchValue">1.0</span></label>
+                        <input type="range" id="pitchSlider" min="0.5" max="2" step="0.1" value="1.0">
+                    </div>
+                    
+                    <div class="speech-setting-item">
+                        <label for="volumeSlider">音量：<span id="volumeValue">1.0</span></label>
+                        <input type="range" id="volumeSlider" min="0" max="1" step="0.1" value="1.0">
+                    </div>
+                    
+                    <div class="speech-setting-item auto-speak-toggle">
+                        <input type="checkbox" id="autoSpeakToggle" checked>
+                        <label for="autoSpeakToggle">自动朗读AI回复</label>
+                    </div>
+                    
+                    <div class="speech-setting-item" style="margin-top: 20px;">
+                        <button id="testSpeechBtn" class="modal-btn primary" style="width: 100%;">测试语音</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn primary" id="saveSpeechBtn">保存设置</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 关于弹窗 -->
+    <div id="infoModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>关于 {{ bot_name }}</h3>
+                <button class="modal-close" id="closeInfoModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 15px;">{{ bot_name }} 是一个基于DeepSeek AI的聊天助手，她可以：</p>
+                <ul style="padding-left: 20px; margin-bottom: 15px;">
+                    <li>与你进行日常聊天</li>
+                    <li>扮演你的AI小女友</li>
+                    <li>提供情感支持和陪伴</li>
+                    <li>支持语音朗读功能</li>
+                </ul>
+                <p>{{ bot_personality }}</p>
+                <div class="user-info">
+                    <p>你的设备ID: <span id="userId"></span></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn primary" id="closeInfoBtn">了解了</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript 文件 -->
+    <script src="{{ url_for('static', filename='js/speech.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+    
+    <script>
+        // 初始化语音功能
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化语音功能
+            if (window.speechModule) {
+                window.speechModule.init();
+                
+                // 语音设置相关事件
+                const speechBtn = document.getElementById('speechBtn');
+                const speechModal = document.getElementById('speechModal');
+                const closeSpeechModal = document.getElementById('closeSpeechModal');
+                const saveSpeechBtn = document.getElementById('saveSpeechBtn');
+                const voiceSelector = document.getElementById('voiceSelector');
+                const rateSlider = document.getElementById('rateSlider');
+                const pitchSlider = document.getElementById('pitchSlider');
+                const volumeSlider = document.getElementById('volumeSlider');
+                const autoSpeakToggle = document.getElementById('autoSpeakToggle');
+                const testSpeechBtn = document.getElementById('testSpeechBtn');
+                const rateValue = document.getElementById('rateValue');
+                const pitchValue = document.getElementById('pitchValue');
+                const volumeValue = document.getElementById('volumeValue');
+                
+                // 显示语音设置弹窗
+                speechBtn.addEventListener('click', function() {
+                    speechModal.classList.add('show');
+                });
+                
+                // 关闭语音设置弹窗
+                closeSpeechModal.addEventListener('click', function() {
+                    speechModal.classList.remove('show');
+                });
+                
+                // 保存语音设置
+                saveSpeechBtn.addEventListener('click', function() {
+                    if (voiceSelector.value) {
+                        window.speechModule.setVoice(voiceSelector.value);
+                    }
+                    window.speechModule.setRate(rateSlider.value);
+                    window.speechModule.setPitch(pitchSlider.value);
+                    window.speechModule.setVolume(volumeSlider.value);
+                    window.speechModule.setAutoSpeak(autoSpeakToggle.checked);
+                    
+                    speechModal.classList.remove('show');
+                });
+                
+                // 测试语音
+                testSpeechBtn.addEventListener('click', function() {
+                    const testText = "你好，我是{{ bot_name }}，这是一条测试语音消息。";
+                    
+                    // 直接使用window.speechModule进行测试
+                    if (window.speechModule) {
+                        // 获取当前设置的值
+                        const voiceName = voiceSelector.value;
+                        const rate = parseFloat(rateSlider.value);
+                        const pitch = parseFloat(pitchSlider.value);
+                        const volume = parseFloat(volumeSlider.value);
+                        
+                        // 应用当前设置
+                        window.speechModule.setVoice(voiceName);
+                        window.speechModule.setRate(rate);
+                        window.speechModule.setPitch(pitch);
+                        window.speechModule.setVolume(volume);
+                        
+                        // 执行语音测试
+                        window.speechModule.speak(testText);
+                    } else {
+                        alert("语音功能不可用");
+                    }
+                });
+                
+                // 更新滑块值显示
+                rateSlider.addEventListener('input', function() {
+                    rateValue.textContent = this.value;
+                });
+                
+                pitchSlider.addEventListener('input', function() {
+                    pitchValue.textContent = this.value;
+                });
+                
+                volumeSlider.addEventListener('input', function() {
+                    volumeValue.textContent = this.value;
+                });
+            } else {
+                // 如果浏览器不支持语音功能，隐藏语音按钮
+                const speechBtn = document.getElementById('speechBtn');
+                if (speechBtn) {
+                    speechBtn.style.display = 'none';
+                }
+            }
+            
+            // 检测屏幕方向并应用适当的类
+            function checkOrientation() {
+                const isLandscape = window.innerWidth > window.innerHeight;
+                const isMobile = window.innerWidth <= 768;
+                const isSmallHeight = window.innerHeight <= 500;
+                
+                const chatContainer = document.querySelector('.chat-container');
+                if (isLandscape && isMobile && isSmallHeight) {
+                    chatContainer.classList.add('landscape-mode');
+                } else {
+                    chatContainer.classList.remove('landscape-mode');
+                }
+            }
+            
+            // 初始检查
+            checkOrientation();
+            
+            // 监听屏幕旋转
+            window.addEventListener('resize', checkOrientation);
+            window.addEventListener('orientationchange', checkOrientation);
+            
+            // 确保页面加载后输入区域可见
+            setTimeout(() => {
+                const inputArea = document.querySelector('.input-area');
+                if (inputArea && window.innerWidth <= 768) {
+                    inputArea.scrollIntoView(false);
+                }
+            }, 500);
+        });
+    </script>
+</body>
+</html> 

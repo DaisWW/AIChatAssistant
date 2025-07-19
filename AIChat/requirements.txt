@@ -1,0 +1,6 @@
+requests==2.31.0
+tkinter-tooltip==2.0.0
+Pillow==10.0.0
+Flask==2.3.3
+Flask-SocketIO==5.3.6
+python-socketio==5.8.0 
